@@ -1,0 +1,24 @@
+{
+  "name": "files-(1)",
+  "version": "1.0.0",
+  "description": "A backend + dashboard where developers sign up, create a \"project,\" pick one of 5 rate-limiting algorithms (or \"auto\"), and call a single REST endpoint from their server — no Redis setup on their end.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ansita20/rate-limitter.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Ansita20/rate-limitter/issues"
+  },
+  "homepage": "https://github.com/Ansita20/rate-limitter#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}
