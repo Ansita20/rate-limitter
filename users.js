@@ -7,8 +7,7 @@
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const Redis = require('ioredis');
-const redis = new Redis();
+const redis = require('./redisClient');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-this-in-production';
 const JWT_EXPIRY = '7d';

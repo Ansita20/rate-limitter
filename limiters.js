@@ -5,8 +5,7 @@
  * the multi-tenant key structure.
  */
 
-const Redis = require('ioredis');
-const redis = new Redis();
+const redis = require('./redisClient');
 
 /* ---------------- 1. Fixed window ---------------- */
 const fixedWindowScript = `
@@ -219,31 +218,66 @@ async function getUsage(projectId, month = new Date().toISOString().slice(0, 7))
 /*   - Low/sporadic traffic                     -> sliding window     */
 /*     counter (accurate, cheap, no need for burst tolerance)         */
 /* ------------------------------------------------------------------ */
-const AUTO_SAMPLE_SIZE = 20;
+// --- Efficiency note -------------------------------------------------
+// The original version stored the last 20 raw request timestamps in a
+// Redis list and, on every single check, pulled the whole list back
+// (LRANGE), sorted it, and recomputed mean/variance in JS. That's 4
+// Redis round trips (LPUSH, LTRIM, EXPIRE, LRANGE) plus O(n log n) work
+// per request — for a hot path that runs on every rate-limit check.
+//
+// Below does the same classification (coefficient of variation of the
+// gaps between requests) but as a streaming/online update: it keeps a
+// tiny exponential moving average (EMA) of the gap and its variance in
+// a Redis hash, updated atomically inside a single Lua script. That's
+// O(1) memory per identifier and exactly 1 Redis round trip per check,
+// instead of O(n) memory and 4 round trips. An EMA with alpha=0.3 also
+// adapts to a change in traffic shape within a handful of requests,
+// rather than waiting for 20 stale samples to scroll out of a list.
+const autoClassifyScript = `
+local key = KEYS[1]
+local now = tonumber(ARGV[1])
+local alpha = tonumber(ARGV[2])
+
+local data = redis.call('HMGET', key, 'lastTs', 'meanGap', 'varGap', 'n')
+local lastTs = tonumber(data[1])
+local meanGap = tonumber(data[2]) or 0
+local varGap = tonumber(data[3]) or 0
+local n = tonumber(data[4]) or 0
+
+if lastTs ~= nil then
+  local gap = math.max(0, now - lastTs)
+  local delta = gap - meanGap
+  meanGap = meanGap + alpha * delta
+  varGap = (1 - alpha) * (varGap + alpha * delta * delta)
+  n = n + 1
+end
+
+redis.call('HMSET', key, 'lastTs', now, 'meanGap', meanGap, 'varGap', varGap, 'n', n)
+redis.call('EXPIRE', key, 300)
+
+return {tostring(meanGap), tostring(varGap), n}
+`;
+
+const AUTO_MIN_SAMPLES = 5;   // don't classify off noise — fall back to a safe default until then
+const AUTO_EMA_ALPHA = 0.3;   // higher = classifier reacts to bursts faster, but is noisier
 
 async function recordAndClassifyTraffic(identifier, projectId) {
   const key = `auto:${projectId}:${identifier}`;
   const now = Date.now();
 
-  await redis.lpush(key, now);
-  await redis.ltrim(key, 0, AUTO_SAMPLE_SIZE - 1);
-  await redis.expire(key, 300); // 5 min rolling window of samples
+  const [meanGapStr, varGapStr, n] = await redis.eval(autoClassifyScript, 1, key, now, AUTO_EMA_ALPHA);
+  const meanGap = parseFloat(meanGapStr);
+  const varGap = Math.max(0, parseFloat(varGapStr));
 
-  const timestamps = (await redis.lrange(key, 0, -1)).map(Number).sort((a, b) => a - b);
-  if (timestamps.length < 5) {
+  if (n < AUTO_MIN_SAMPLES) {
     return 'sliding-window-counter'; // not enough data yet, use safe default
   }
 
-  const gaps = [];
-  for (let i = 1; i < timestamps.length; i++) gaps.push(timestamps[i] - timestamps[i - 1]);
-
-  const mean = gaps.reduce((a, b) => a + b, 0) / gaps.length;
-  const variance = gaps.reduce((a, b) => a + (b - mean) ** 2, 0) / gaps.length;
-  const stdDev = Math.sqrt(variance);
-  const coefficientOfVariation = mean > 0 ? stdDev / mean : 0;
+  const stdDev = Math.sqrt(varGap);
+  const coefficientOfVariation = meanGap > 0 ? stdDev / meanGap : 0;
 
   if (coefficientOfVariation > 1.2) return 'leaky-bucket';       // bursty -> smooth it
-  if (mean < 200) return 'token-bucket';                          // fast steady traffic -> allow controlled bursts
+  if (meanGap < 200) return 'token-bucket';                       // fast steady traffic -> allow controlled bursts
   return 'sliding-window-counter';                                 // default: accurate, cheap
 }
 

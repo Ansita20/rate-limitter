@@ -1,24 +1,41 @@
 {
-  "name": "files-(1)",
+  "name": "throttle",
   "version": "1.0.0",
-  "description": "A backend + dashboard where developers sign up, create a \"project,\" pick one of 5 rate-limiting algorithms (or \"auto\"), and call a single REST endpoint from their server — no Redis setup on their end.",
-  "main": "index.js",
+  "description": "Multi-tenant rate limiting API: sign up, create a project, pick an algorithm (or 'auto'), call one REST endpoint from any language. No Redis setup on your end.",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "bash test-requests.sh"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Ansita20/rate-limitter.git"
   },
-  "keywords": [],
+  "keywords": [
+    "rate-limiting",
+    "throttle",
+    "redis",
+    "api",
+    "middleware"
+  ],
   "author": "",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/Ansita20/rate-limitter/issues"
   },
   "homepage": "https://github.com/Ansita20/rate-limitter#readme",
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
-    "express": "^5.2.1"
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.6.1",
+    "ioredis": "^6.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "razorpay": "^2.9.8"
   }
 }

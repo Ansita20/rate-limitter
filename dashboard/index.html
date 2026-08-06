@@ -198,6 +198,7 @@
 
 </main>
 
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
 const API = window.location.origin;
 let token = localStorage.getItem('throttle_token') || null;
@@ -313,8 +314,10 @@ async function loadProjects() {
           <button data-copy="${p.apiKey}">copy</button>
         </div>
         <div class="usage" data-usage-for="${p.apiKey}">Usage this month: <b>…</b></div>
-        <div style="margin-top:8px;">
+        <div style="margin-top:8px; display:flex; gap:14px; align-items:center;">
           <span class="del" data-delete="${p.apiKey}">delete project</span>
+          <button class="upgradeBtn" data-project-name="${p.name}" style="background:none;border:1px solid var(--line);color:var(--go);padding:4px 10px;border-radius:3px;cursor:pointer;font-family:var(--mono);font-size:11px;">upgrade — ₹99</button>
+          <span class="payStatus" data-pay-status style="font-size:11px;color:var(--muted);"></span>
         </div>
       `;
       listEl.appendChild(el);
@@ -335,6 +338,9 @@ async function loadProjects() {
         loadProjects();
       });
     });
+    listEl.querySelectorAll('.upgradeBtn').forEach((btn) => {
+      btn.addEventListener('click', () => startCheckout(btn));
+    });
   } catch (e) {
     listEl.innerHTML = `<div class="empty">Failed to load projects.</div>`;
   }
@@ -347,6 +353,84 @@ async function loadUsage(apiKey) {
     const el = document.querySelector(`[data-usage-for="${apiKey}"] b`);
     if (el) el.textContent = `${data.requestCount} requests`;
   } catch (e) { /* ignore */ }
+}
+
+/* ------------------------------------------------------------------ */
+/* PAYMENTS — Razorpay Standard Checkout                               */
+/* Demo flow: ₹99 flat "upgrade pack" per project. Swap the fixed      */
+/* amount below for real plan pricing when you wire this to a plan.    */
+/* ------------------------------------------------------------------ */
+let razorpayKeyId = null;
+async function getRazorpayKeyId() {
+  if (razorpayKeyId) return razorpayKeyId;
+  const res = await fetch(`${API}/v1/payments/config`);
+  const data = await res.json();
+  razorpayKeyId = data.keyId;
+  return razorpayKeyId;
+}
+
+async function startCheckout(btn) {
+  const statusEl = btn.closest('div').querySelector('[data-pay-status]');
+  const setStatus = (msg) => { if (statusEl) statusEl.textContent = msg; };
+
+  try {
+    btn.disabled = true;
+    setStatus('starting checkout…');
+
+    const keyId = await getRazorpayKeyId();
+    if (!keyId) throw new Error('Payments are not configured on the server yet.');
+
+    const orderRes = await fetch(`${API}/v1/payments/create-order`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ amount: 9900, currency: 'INR', receipt: `${btn.dataset.projectName}_${Date.now()}` }),
+    });
+    const order = await orderRes.json();
+    if (!orderRes.ok) throw new Error(order.error || 'Could not start checkout');
+
+    const rzp = new Razorpay({
+      key: keyId,
+      amount: order.amount,
+      currency: order.currency,
+      order_id: order.order_id,
+      name: 'Throttle',
+      description: `Upgrade pack — ${btn.dataset.projectName}`,
+      handler: async (response) => {
+        // response = { razorpay_payment_id, razorpay_order_id, razorpay_signature }
+        setStatus('verifying payment…');
+        try {
+          const verifyRes = await fetch(`${API}/v1/payments/verify-payment`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(response),
+          });
+          const result = await verifyRes.json();
+          setStatus(verifyRes.ok && result.verified ? '✓ payment verified' : '✗ verification failed');
+        } catch (e) {
+          setStatus('✗ verification request failed');
+        } finally {
+          btn.disabled = false;
+        }
+      },
+      modal: {
+        ondismiss: () => {
+          setStatus('checkout cancelled');
+          btn.disabled = false;
+        },
+      },
+      theme: { color: '#4ade80' },
+    });
+
+    rzp.on('payment.failed', (resp) => {
+      setStatus(`✗ payment failed: ${resp.error.description || resp.error.reason}`);
+      btn.disabled = false;
+    });
+
+    rzp.open();
+  } catch (e) {
+    setStatus(e.message || 'Could not start checkout');
+    btn.disabled = false;
+  }
 }
 
 document.getElementById('newProjectForm').addEventListener('submit', async (e) => {

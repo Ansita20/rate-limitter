@@ -17,8 +17,11 @@
  * Run: node server.js   (needs Redis on localhost:6379)
  */
 
+require('dotenv').config(); // loads .env if present — no-op if it doesn't exist
+
 const path = require('path');
 const express = require('express');
+const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const { requireAuth, signup, login } = require('./users');
 const {
@@ -29,19 +32,27 @@ const {
   VALID_ALGOS,
 } = require('./projects');
 const { ALGOS, recordUsage, getUsage, autoMode } = require('./limiters');
+const { createOrder, verifyPayment } = require('./payments');
 
 const app = express();
+// Open by default so the /v1/check endpoint can be called straight from any
+// site's frontend or backend, in any language. Lock this down to your own
+// domain(s) with CORS_ORIGIN (comma-separated) once you're in production —
+// see .env.example.
+const corsOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim()) : true;
+app.use(cors({ origin: corsOrigins }));
 app.use(express.json());
 // path.join(__dirname, 'dashboard') always points at THIS file's own
 // dashboard/ folder, no matter what directory you run `node server.js` from.
+// express.static serves dashboard/index.html automatically at "/".
 app.use(express.static(path.join(__dirname, 'dashboard')));
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 /* ------------------------------------------------------------------ */
 /* Self-protection for our own endpoints                              */
 /* ------------------------------------------------------------------ */
 app.use('/v1/auth', rateLimit({ windowMs: 60_000, max: 10 }));
 app.use('/v1/projects', rateLimit({ windowMs: 60_000, max: 30 }));
+app.use('/v1/payments', rateLimit({ windowMs: 60_000, max: 20 }));
 
 /* ------------------------------------------------------------------ */
 /* AUTH                                                                */
@@ -118,6 +129,21 @@ app.get('/v1/usage/:apiKey', requireAuth, async (req, res) => {
   const count = await getUsage(project.projectId);
   res.json({ projectId: project.projectId, month: new Date().toISOString().slice(0, 7), requestCount: count });
 });
+
+/* ------------------------------------------------------------------ */
+/* PAYMENTS — Razorpay Standard Checkout                               */
+/* ------------------------------------------------------------------ */
+
+// Public: hands the frontend the (public-by-design) key_id so it never
+// has to be hardcoded in dashboard/index.html. KEY_SECRET is never
+// returned from here or anywhere else.
+app.get('/v1/payments/config', (req, res) => {
+  res.json({ keyId: process.env.RAZORPAY_KEY_ID || null });
+});
+
+// Requires a logged-in user — we need to know who is paying.
+app.post('/v1/payments/create-order', requireAuth, createOrder);
+app.post('/v1/payments/verify-payment', requireAuth, verifyPayment);
 
 /* ------------------------------------------------------------------ */
 /* RATE LIMIT CHECK — requires a project API key (not a user JWT)     */

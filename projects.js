@@ -7,8 +7,7 @@
  */
 
 const crypto = require('crypto');
-const Redis = require('ioredis');
-const redis = new Redis();
+const redis = require('./redisClient');
 
 const VALID_ALGOS = [
   'fixed-window',

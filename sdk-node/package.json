@@ -1,0 +1,12 @@
+{
+  "name": "throttle-sdk",
+  "version": "1.0.0",
+  "description": "Node.js SDK for the Throttle rate limiting API",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["rate-limiting", "throttle", "express", "middleware"]
+}
