@@ -1,0 +1,23 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+
+  api:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${PORT:-4000}:4000"
+    environment:
+      - PORT=4000
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-dev-secret-change-this-in-production}
+      - CORS_ORIGIN=${CORS_ORIGIN:-}
+    depends_on:
+      - redis
+
+volumes:
+  redis-data:

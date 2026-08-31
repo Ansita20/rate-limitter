@@ -1,0 +1,41 @@
+{
+  "name": "throttle",
+  "version": "1.0.0",
+  "description": "Multi-tenant rate limiting API: sign up, create a project, pick an algorithm (or 'auto'), call one REST endpoint from any language. No Redis setup on your end.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "bash scripts/test-requests.sh"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ansita20/rate-limitter.git"
+  },
+  "keywords": [
+    "rate-limiting",
+    "throttle",
+    "redis",
+    "api",
+    "middleware"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Ansita20/rate-limitter/issues"
+  },
+  "homepage": "https://github.com/Ansita20/rate-limitter#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.6.1",
+    "ioredis": "^6.0.0",
+    "jsonwebtoken": "^9.0.3",
+    "razorpay": "^2.9.8"
+  }
+}

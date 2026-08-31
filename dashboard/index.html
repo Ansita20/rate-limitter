@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Throttle — rate limiting infrastructure</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+  :root {
+    --bg: #0b0e0d;
+    --panel: #121716;
+    --line: #223028;
+    --text: #e6efe9;
+    --muted: #7f9488;
+    --go: #4ade80;
+    --stop: #f87171;
+    --amber: #f5b942;
+    --mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .signal {
+    position: fixed; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--stop) 0 33%, var(--amber) 33% 66%, var(--go) 66% 100%);
+  }
+  header {
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: baseline; justify-content: space-between;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--go); box-shadow: 0 0 8px var(--go); }
+  .brand h1 { font-size: 17px; margin: 0; letter-spacing: 0.02em; font-weight: 600; }
+  .brand .tag { color: var(--muted); font-size: 12px; margin-left: 4px; }
+  #userBar { color: var(--muted); font-size: 12px; display: flex; gap: 12px; align-items: center; }
+  #userBar button { background: none; border: 1px solid var(--line); color: var(--muted); padding: 5px 10px; border-radius: 3px; cursor: pointer; font-family: var(--mono); font-size: 11px; }
+  #userBar button:hover { border-color: var(--stop); color: var(--stop); }
+
+  main { max-width: 880px; margin: 0 auto; padding: 32px; }
+
+  /* --- Auth screen --- */
+  #authScreen { max-width: 380px; margin: 60px auto; }
+  #authScreen h2 { font-size: 15px; color: var(--muted); font-weight: 500; margin-bottom: 20px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.06em; }
+  input, select {
+    width: 100%; background: #0e1412; border: 1px solid var(--line); color: var(--text);
+    padding: 9px 10px; border-radius: 3px; font-family: var(--mono); font-size: 13px;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--go); }
+  .btn {
+    background: var(--go); color: #0b0e0d; border: none; padding: 10px 16px;
+    border-radius: 3px; font-family: var(--mono); font-weight: 600; font-size: 13px; cursor: pointer;
+  }
+  .btn:hover { filter: brightness(1.1); }
+  .btn.secondary { background: none; border: 1px solid var(--line); color: var(--text); }
+  .switchLink { color: var(--muted); font-size: 12px; margin-top: 14px; cursor: pointer; text-decoration: underline; }
+  .errorMsg { color: var(--stop); font-size: 12px; margin-top: 10px; min-height: 16px; }
+
+  /* --- App screen --- */
+  .sectionHead { display: flex; justify-content: space-between; align-items: center; margin: 32px 0 14px; }
+  .sectionHead h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; margin: 0; }
+
+  .project {
+    border: 1px solid var(--line); border-radius: 4px; padding: 16px; margin-bottom: 10px;
+    background: #0e1412;
+  }
+  .project .row1 { display: flex; justify-content: space-between; align-items: center; }
+  .project .name { font-weight: 600; font-size: 14px; }
+  .algoTag {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 2px 7px; border-radius: 10px; border: 1px solid var(--line); color: var(--muted);
+  }
+  .project .meta { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .apiKeyRow {
+    margin-top: 10px; display: flex; gap: 8px; align-items: center;
+    background: #0b0e0d; border: 1px solid var(--line); border-radius: 3px; padding: 6px 10px;
+  }
+  .apiKeyRow code { flex: 1; color: var(--go); font-size: 12px; overflow-x: auto; white-space: nowrap; }
+  .apiKeyRow button, .project .del { background: none; border: none; color: var(--muted); cursor: pointer; font-family: var(--mono); font-size: 11px; }
+  .apiKeyRow button:hover, .project .del:hover { color: var(--go); }
+  .project .del:hover { color: var(--stop); }
+  .usage { font-size: 11px; color: var(--muted); margin-top: 8px; }
+  .usage b { color: var(--text); }
+
+  .empty { color: var(--muted); font-size: 13px; padding: 24px; text-align: center; border: 1px dashed var(--line); border-radius: 4px; }
+
+  form.newProject { border: 1px solid var(--line); border-radius: 4px; padding: 18px; background: #0e1412; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .hint { color: var(--muted); font-size: 11px; margin-top: 4px; }
+  .algoDesc { font-size: 11px; color: var(--muted); margin-top: 8px; padding: 8px 10px; background: #0b0e0d; border-radius: 3px; border-left: 2px solid var(--amber); }
+
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="signal"></div>
+
+<header>
+  <div class="brand">
+    <span class="dot"></span>
+    <h1>THROTTLE</h1>
+    <span class="tag">rate limiting, on tap</span>
+  </div>
+  <div id="userBar" class="hidden">
+    <span id="userEmail"></span>
+    <button id="logoutBtn">Log out</button>
+  </div>
+</header>
+
+<main>
+
+  <!-- AUTH SCREEN -->
+  <div id="authScreen">
+    <h2 id="authTitle">Log in to your account</h2>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="authEmail" placeholder="you@company.com">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="authPassword" placeholder="••••••••">
+    </div>
+    <button class="btn" id="authSubmit">Log in</button>
+    <div class="errorMsg" id="authError"></div>
+    <div class="switchLink" id="authSwitch">Don't have an account? Sign up</div>
+  </div>
+
+  <!-- APP SCREEN -->
+  <div id="appScreen" class="hidden">
+    <div class="sectionHead">
+      <h2>Your projects</h2>
+    </div>
+    <div id="projectList"></div>
+
+    <div class="sectionHead"><h2>New project</h2></div>
+    <form class="newProject" id="newProjectForm">
+      <div class="field">
+        <label>Project name</label>
+        <input type="text" id="npName" placeholder="my-api" required>
+      </div>
+      <div class="field">
+        <label>Algorithm</label>
+        <select id="npAlgo">
+          <option value="sliding-window-counter">Sliding window counter (recommended default)</option>
+          <option value="fixed-window">Fixed window</option>
+          <option value="sliding-window-log">Sliding window log</option>
+          <option value="token-bucket">Token bucket</option>
+          <option value="leaky-bucket">Leaky bucket</option>
+          <option value="auto">Auto (traffic-adaptive, heuristic)</option>
+        </select>
+        <div class="algoDesc" id="algoDesc"></div>
+      </div>
+
+      <div class="grid2" id="paramsWindow">
+        <div class="field">
+          <label>Limit (requests)</label>
+          <input type="number" id="npLimit" value="100">
+        </div>
+        <div class="field">
+          <label>Window (seconds)</label>
+          <input type="number" id="npWindow" value="60">
+        </div>
+      </div>
+
+      <div class="grid2 hidden" id="paramsLog">
+        <div class="field">
+          <label>Limit (requests)</label>
+          <input type="number" id="npLimitLog" value="100">
+        </div>
+        <div class="field">
+          <label>Window (ms)</label>
+          <input type="number" id="npWindowMs" value="60000">
+        </div>
+      </div>
+
+      <div class="grid2 hidden" id="paramsBucket">
+        <div class="field">
+          <label>Capacity</label>
+          <input type="number" id="npCapacity" value="100">
+        </div>
+        <div class="field">
+          <label>Rate per second</label>
+          <input type="number" id="npRate" value="10">
+        </div>
+      </div>
+
+      <button type="submit" class="btn" style="margin-top: 8px;">Create project</button>
+      <div class="errorMsg" id="npError"></div>
+    </form>
+  </div>
+
+</main>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+const API = window.location.origin;
+let token = localStorage.getItem('throttle_token') || null;
+let email = localStorage.getItem('throttle_email') || null;
+let mode = 'login';
+
+const ALGO_DESCRIPTIONS = {
+  'sliding-window-counter': 'Best general-purpose default: accurate, low memory, no edge-burst exploit.',
+  'fixed-window': 'Simplest and cheapest, but allows up to 2x traffic right at window boundaries.',
+  'sliding-window-log': 'Exact accuracy, stores one entry per request — best for low-volume, high-precision needs.',
+  'token-bucket': 'Allows controlled bursts up to capacity, refills steadily — good for public APIs.',
+  'leaky-bucket': 'Smooths bursts into constant output — good for protecting queues/downstream systems.',
+  'auto': 'Heuristic-based: watches recent traffic burstiness per identifier and switches between algorithms automatically. Not machine learning — a simple, transparent rule.',
+};
+
+function authHeaders() {
+  return { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' };
+}
+
+function showApp() {
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('appScreen').classList.remove('hidden');
+  document.getElementById('userBar').classList.remove('hidden');
+  document.getElementById('userEmail').textContent = email;
+  loadProjects();
+}
+
+function showAuth() {
+  document.getElementById('authScreen').classList.remove('hidden');
+  document.getElementById('appScreen').classList.add('hidden');
+  document.getElementById('userBar').classList.add('hidden');
+}
+
+function sessionExpired() {
+  localStorage.removeItem('throttle_token');
+  localStorage.removeItem('throttle_email');
+  token = null; email = null;
+  showAuth();
+  document.getElementById('authError').textContent = 'Your session expired — please log in again.';
+}
+
+document.getElementById('authSwitch').addEventListener('click', () => {
+  mode = mode === 'login' ? 'signup' : 'login';
+  document.getElementById('authTitle').textContent = mode === 'login' ? 'Log in to your account' : 'Create an account';
+  document.getElementById('authSubmit').textContent = mode === 'login' ? 'Log in' : 'Sign up';
+  document.getElementById('authSwitch').textContent = mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Log in';
+  document.getElementById('authError').textContent = '';
+});
+
+document.getElementById('authSubmit').addEventListener('click', async () => {
+  const emailVal = document.getElementById('authEmail').value.trim();
+  const passwordVal = document.getElementById('authPassword').value;
+  const errEl = document.getElementById('authError');
+  errEl.textContent = '';
+
+  try {
+    const res = await fetch(`${API}/v1/auth/${mode}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: emailVal, password: passwordVal }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Something went wrong'; return; }
+
+    token = data.token; email = data.email;
+    localStorage.setItem('throttle_token', token);
+    localStorage.setItem('throttle_email', email);
+    showApp();
+  } catch (e) {
+    errEl.textContent = 'Could not reach the server.';
+  }
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  localStorage.removeItem('throttle_token');
+  localStorage.removeItem('throttle_email');
+  token = null; email = null;
+  showAuth();
+});
+
+/* ---- Algo param field switching ---- */
+document.getElementById('npAlgo').addEventListener('change', (e) => {
+  const algo = e.target.value;
+  document.getElementById('algoDesc').textContent = ALGO_DESCRIPTIONS[algo] || '';
+  document.getElementById('paramsWindow').classList.toggle('hidden', !(algo === 'fixed-window' || algo === 'sliding-window-counter' || algo === 'auto'));
+  document.getElementById('paramsLog').classList.toggle('hidden', algo !== 'sliding-window-log');
+  document.getElementById('paramsBucket').classList.toggle('hidden', !(algo === 'token-bucket' || algo === 'leaky-bucket'));
+});
+document.getElementById('algoDesc').textContent = ALGO_DESCRIPTIONS['sliding-window-counter'];
+
+/* ---- Projects ---- */
+async function loadProjects() {
+  const listEl = document.getElementById('projectList');
+  listEl.innerHTML = '<div class="empty">Loading…</div>';
+  try {
+    const res = await fetch(`${API}/v1/projects`, { headers: authHeaders() });
+    if (res.status === 401) { sessionExpired(); return; }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+
+    if (data.projects.length === 0) {
+      listEl.innerHTML = '<div class="empty">No projects yet — create one below to get an API key.</div>';
+      return;
+    }
+
+    listEl.innerHTML = '';
+    for (const p of data.projects) {
+      const el = document.createElement('div');
+      el.className = 'project';
+      const configBits = [];
+      if (p.limit) configBits.push(`${p.limit} req / ${p.windowSec || (p.windowMs / 1000)}s`);
+      if (p.capacity) configBits.push(`capacity ${p.capacity}, ${p.refillRatePerSec || p.leakRatePerSec}/s`);
+
+      el.innerHTML = `
+        <div class="row1">
+          <span class="name">${p.name}</span>
+          <span class="algoTag">${p.algo}</span>
+        </div>
+        <div class="meta">${configBits.join(' · ')}</div>
+        <div class="apiKeyRow">
+          <code>${p.apiKey}</code>
+          <button data-copy="${p.apiKey}">copy</button>
+        </div>
+        <div class="usage" data-usage-for="${p.apiKey}">Usage this month: <b>…</b></div>
+        <div style="margin-top:8px; display:flex; gap:14px; align-items:center;">
+          <span class="del" data-delete="${p.apiKey}">delete project</span>
+          ${p.plan === 'pro'
+            ? '<span style="font-size:11px;color:var(--go);">pro plan ✓</span>'
+            : `<button class="upgradeBtn" data-project-name="${p.name}" data-api-key="${p.apiKey}" style="background:none;border:1px solid var(--line);color:var(--go);padding:4px 10px;border-radius:3px;cursor:pointer;font-family:var(--mono);font-size:11px;">upgrade — ₹99</button>`}
+          <span class="payStatus" data-pay-status style="font-size:11px;color:var(--muted);"></span>
+        </div>
+      `;
+      listEl.appendChild(el);
+      loadUsage(p.apiKey);
+    }
+
+    listEl.querySelectorAll('[data-copy]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        navigator.clipboard.writeText(btn.dataset.copy);
+        btn.textContent = 'copied!';
+        setTimeout(() => (btn.textContent = 'copy'), 1200);
+      });
+    });
+    listEl.querySelectorAll('[data-delete]').forEach((el) => {
+      el.addEventListener('click', async () => {
+        if (!confirm('Delete this project? This cannot be undone.')) return;
+        const res = await fetch(`${API}/v1/projects/${el.dataset.delete}`, { method: 'DELETE', headers: authHeaders() });
+        if (res.status === 401) { sessionExpired(); return; }
+        loadProjects();
+      });
+    });
+    listEl.querySelectorAll('.upgradeBtn').forEach((btn) => {
+      btn.addEventListener('click', () => startCheckout(btn));
+    });
+  } catch (e) {
+    listEl.innerHTML = `<div class="empty">Failed to load projects.</div>`;
+  }
+}
+
+async function loadUsage(apiKey) {
+  try {
+    const res = await fetch(`${API}/v1/usage/${apiKey}`, { headers: authHeaders() });
+    const data = await res.json();
+    const el = document.querySelector(`[data-usage-for="${apiKey}"] b`);
+    if (el) el.textContent = `${data.requestCount} requests`;
+  } catch (e) { /* ignore */ }
+}
+
+/* ------------------------------------------------------------------ */
+/* PAYMENTS — Razorpay Standard Checkout                               */
+/* Demo flow: ₹99 flat "upgrade pack" per project. Swap the fixed      */
+/* amount below for real plan pricing when you wire this to a plan.    */
+/* ------------------------------------------------------------------ */
+let razorpayKeyId = null;
+async function getRazorpayKeyId() {
+  if (razorpayKeyId) return razorpayKeyId;
+  const res = await fetch(`${API}/v1/payments/config`);
+  const data = await res.json();
+  razorpayKeyId = data.keyId;
+  return razorpayKeyId;
+}
+
+async function startCheckout(btn) {
+  const statusEl = btn.closest('div').querySelector('[data-pay-status]');
+  const setStatus = (msg) => { if (statusEl) statusEl.textContent = msg; };
+
+  try {
+    btn.disabled = true;
+    setStatus('starting checkout…');
+
+    const keyId = await getRazorpayKeyId();
+    if (!keyId) throw new Error('Payments are not configured on the server yet.');
+
+    const orderRes = await fetch(`${API}/v1/payments/create-order`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ apiKey: btn.dataset.apiKey, receipt: `${btn.dataset.projectName}_${Date.now()}` }),
+    });
+    const order = await orderRes.json();
+    if (!orderRes.ok) throw new Error(order.error || 'Could not start checkout');
+
+    const rzp = new Razorpay({
+      key: keyId,
+      amount: order.amount,
+      currency: order.currency,
+      order_id: order.order_id,
+      name: 'Throttle',
+      description: `Upgrade pack — ${btn.dataset.projectName}`,
+      handler: async (response) => {
+        // response = { razorpay_payment_id, razorpay_order_id, razorpay_signature }
+        setStatus('verifying payment…');
+        try {
+          const verifyRes = await fetch(`${API}/v1/payments/verify-payment`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(response),
+          });
+          const result = await verifyRes.json();
+          if (verifyRes.ok && result.verified) {
+            setStatus('✓ upgraded!');
+            loadProjects();
+          } else {
+            setStatus('✗ verification failed');
+          }
+        } catch (e) {
+          setStatus('✗ verification request failed');
+        } finally {
+          btn.disabled = false;
+        }
+      },
+      modal: {
+        ondismiss: () => {
+          setStatus('checkout cancelled');
+          btn.disabled = false;
+        },
+      },
+      theme: { color: '#4ade80' },
+    });
+
+    rzp.on('payment.failed', (resp) => {
+      setStatus(`✗ payment failed: ${resp.error.description || resp.error.reason}`);
+      btn.disabled = false;
+    });
+
+    rzp.open();
+  } catch (e) {
+    setStatus(e.message || 'Could not start checkout');
+    btn.disabled = false;
+  }
+}
+
+document.getElementById('newProjectForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errEl = document.getElementById('npError');
+  errEl.textContent = '';
+
+  const name = document.getElementById('npName').value.trim();
+  const algo = document.getElementById('npAlgo').value;
+  let config = { name, algo };
+
+  if (algo === 'fixed-window' || algo === 'sliding-window-counter' || algo === 'auto') {
+    config.limit = Number(document.getElementById('npLimit').value);
+    config.windowSec = Number(document.getElementById('npWindow').value);
+  } else if (algo === 'sliding-window-log') {
+    config.limit = Number(document.getElementById('npLimitLog').value);
+    config.windowMs = Number(document.getElementById('npWindowMs').value);
+  } else if (algo === 'token-bucket') {
+    config.capacity = Number(document.getElementById('npCapacity').value);
+    config.refillRatePerSec = Number(document.getElementById('npRate').value);
+  } else if (algo === 'leaky-bucket') {
+    config.capacity = Number(document.getElementById('npCapacity').value);
+    config.leakRatePerSec = Number(document.getElementById('npRate').value);
+  }
+
+  try {
+    const res = await fetch(`${API}/v1/projects`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(config) });
+    if (res.status === 401) { sessionExpired(); return; }
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error; return; }
+    document.getElementById('npName').value = '';
+    loadProjects();
+  } catch (e) {
+    errEl.textContent = 'Could not reach the server.';
+  }
+});
+
+/* ---- boot ---- */
+if (token && email) showApp(); else showAuth();
+</script>
+</body>
+</html>

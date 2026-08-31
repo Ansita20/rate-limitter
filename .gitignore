@@ -1,0 +1,11 @@
+node_modules/
+.env
+.env.local
+.redis-data/
+*.log
+npm-debug.log*
+.DS_Store
+dist/
+build/
+*.rdb
+*.aof
