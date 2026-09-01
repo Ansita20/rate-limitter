@@ -5,7 +5,7 @@ Wraps the /v1/check REST endpoint.
 Usage:
     from throttle_sdk import Throttle
 
-    throttle = Throttle(api_key="rlk_...")
+    throttle = Throttle(api_key="rlk_...", base_url="https://your-throttle-host")
     result = throttle.check("user_123")
     if not result["allowed"]:
         # return a 429
@@ -16,10 +16,11 @@ import requests
 
 
 class Throttle:
-    def __init__(self, api_key, base_url="https://api.throttle.dev", timeout=3.0, fail_open=True):
+    def __init__(self, api_key, base_url=None, timeout=3.0, fail_open=True):
         """
         :param api_key: your project's API key
-        :param base_url: defaults to the hosted API
+        :param base_url: the URL of your self-hosted Throttle instance
+            (Throttle has no shared public API — you run your own; see the README)
         :param timeout: request timeout in seconds, default 3.0
         :param fail_open: if the API is unreachable, allow the request through
             instead of raising. Default True (recommended — a rate limiter
@@ -27,6 +28,8 @@ class Throttle:
         """
         if not api_key:
             raise ValueError("Throttle: api_key is required")
+        if not base_url:
+            raise ValueError("Throttle: base_url is required — point it at your self-hosted Throttle instance")
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout

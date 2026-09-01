@@ -1,12 +1,23 @@
 {
   "name": "throttle-sdk",
   "version": "1.0.0",
-  "description": "Node.js SDK for the Throttle rate limiting API",
+  "description": "Node.js SDK for Throttle, a self-hosted multi-tenant rate limiting API",
   "main": "index.js",
   "types": "index.d.ts",
+  "files": ["index.js", "index.d.ts", "README.md"],
   "license": "ISC",
+  "author": "Ansita Singh",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ansita20/rate-limitter.git",
+    "directory": "sdk-node"
+  },
+  "homepage": "https://github.com/Ansita20/rate-limitter/tree/main/sdk-node#readme",
+  "bugs": {
+    "url": "https://github.com/Ansita20/rate-limitter/issues"
+  },
   "engines": {
     "node": ">=18"
   },
-  "keywords": ["rate-limiting", "throttle", "express", "middleware"]
+  "keywords": ["rate-limiting", "throttle", "express", "middleware", "redis"]
 }

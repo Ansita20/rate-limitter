@@ -1,6 +1,6 @@
 export interface ThrottleOptions {
   apiKey: string;
-  baseUrl?: string;
+  baseUrl: string;
   timeoutMs?: number;
   failOpen?: boolean;
 }

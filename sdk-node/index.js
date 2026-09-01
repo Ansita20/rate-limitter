@@ -4,7 +4,7 @@
  *
  * Usage:
  *   const { Throttle } = require('throttle-sdk');
- *   const throttle = new Throttle({ apiKey: 'rlk_...' });
+ *   const throttle = new Throttle({ apiKey: 'rlk_...', baseUrl: 'https://your-throttle-host' });
  *
  *   const { allowed, remaining } = await throttle.check('user_123');
  *   if (!allowed) {
@@ -16,14 +16,16 @@ class Throttle {
   /**
    * @param {Object} opts
    * @param {string} opts.apiKey - your project's API key
-   * @param {string} [opts.baseUrl] - defaults to the hosted API
+   * @param {string} opts.baseUrl - the URL of your self-hosted Throttle instance
+   *   (Throttle has no shared public API — you run your own; see the README)
    * @param {number} [opts.timeoutMs] - request timeout, default 3000ms
    * @param {boolean} [opts.failOpen] - if the API is unreachable, allow the
    *   request through instead of throwing. Default true (recommended for
    *   most apps — a rate limiter outage shouldn't take down your whole site).
    */
-  constructor({ apiKey, baseUrl = 'https://api.throttle.dev', timeoutMs = 3000, failOpen = true }) {
+  constructor({ apiKey, baseUrl, timeoutMs = 3000, failOpen = true }) {
     if (!apiKey) throw new Error('Throttle: apiKey is required');
+    if (!baseUrl) throw new Error('Throttle: baseUrl is required — point it at your self-hosted Throttle instance');
     this.apiKey = apiKey;
     this.baseUrl = baseUrl.replace(/\/$/, '');
     this.timeoutMs = timeoutMs;
