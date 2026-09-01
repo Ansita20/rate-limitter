@@ -1,7 +1,7 @@
 # Throttle — rate limiting for any app, in any language
 
 ## Link
-https://throttel-rate-limiter.duckdns.org
+https://www.throtlle-ratelimiter.com
 
 Sign up, create a "project," pick a rate-limiting algorithm (or let it
 pick automatically), and call **one REST endpoint** from your server to
