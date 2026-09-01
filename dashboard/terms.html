@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Throttle — Terms of Service</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+  :root {
+    --bg: #0b0e0d; --panel: #121716; --line: #223028; --text: #e6efe9;
+    --muted: #7f9488; --go: #4ade80; --mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--mono); font-size: 14px; line-height: 1.7; }
+  header { padding: 28px 32px 20px; border-bottom: 1px solid var(--line); }
+  header a { color: var(--go); text-decoration: none; font-size: 12px; }
+  main { max-width: 720px; margin: 0 auto; padding: 40px 32px 80px; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .updated { color: var(--muted); font-size: 12px; margin-bottom: 32px; }
+  h2 { font-size: 14px; color: var(--go); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 36px; }
+  p, li { color: #cddbd3; font-size: 13px; }
+  .notice { border-left: 2px solid #f5b942; background: #0e1412; padding: 12px 14px; margin-bottom: 28px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header><a href="/">&larr; Back to Throttle</a></header>
+<main>
+  <h1>Terms of Service</h1>
+  <div class="updated">Last updated: September 1, 2026</div>
+
+  <div class="notice">
+    This is a plain-language starting template, not a substitute for advice
+    from a qualified lawyer. Have it reviewed before relying on it for a
+    product that handles real users' data or real payments.
+  </div>
+
+  <h2>1. What Throttle is</h2>
+  <p>Throttle is a rate-limiting API service. You sign up, create one or
+  more "projects" (each with its own API key and rate-limiting
+  configuration), and call our <code>/v1/check</code> endpoint from your
+  own application to decide whether a given request should be allowed.</p>
+
+  <h2>2. Your account</h2>
+  <p>You're responsible for keeping your login credentials and project API
+  keys confidential. You're responsible for all activity that happens
+  under your account and your API keys. Tell us if you believe an API key
+  has been compromised — you can delete and re-create a project to rotate
+  it immediately from the dashboard.</p>
+
+  <h2>3. Acceptable use</h2>
+  <p>Don't use Throttle to rate-limit or otherwise support any unlawful
+  activity, and don't attempt to abuse, disrupt, or gain unauthorized
+  access to the service itself (its infrastructure, other users' accounts,
+  or other users' data).</p>
+
+  <h2>4. Payments and plans</h2>
+  <p>Paid upgrades are processed via Razorpay. Prices are shown before you
+  pay. Charges are for the plan upgrade described at checkout; we don't
+  store your card details ourselves — that's handled entirely by
+  Razorpay.</p>
+
+  <h2>5. No uptime guarantee (for now)</h2>
+  <p>Throttle is currently offered as-is, without a formal uptime
+  guarantee or service-level agreement. If the rate-limiting check
+  endpoint is unreachable, our own official SDKs are designed to
+  "fail open" (allow the request through) by default rather than break
+  your application, but you should design your own integration with that
+  possibility in mind.</p>
+
+  <h2>6. Data and deletion</h2>
+  <p>See the <a href="/privacy.html" style="color: var(--go);">Privacy Policy</a>
+  for what we store and for how long. You can delete a project (and its
+  associated API key and rate-limit data) at any time from the dashboard.
+  To delete your account entirely, contact us at the email below.</p>
+
+  <h2>7. Changes</h2>
+  <p>We may update these terms as the product evolves. Material changes
+  will be reflected by updating the date at the top of this page.</p>
+
+  <h2>8. Contact</h2>
+  <p>Questions about these terms: reach out via the
+  <a href="https://github.com/Ansita20/rate-limitter/issues" style="color: var(--go);">GitHub repository's issue tracker</a>.</p>
+</main>
+</body>
+</html>

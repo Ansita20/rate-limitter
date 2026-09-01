@@ -36,6 +36,7 @@
     "express-rate-limit": "^8.6.1",
     "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^9.1.0",
     "razorpay": "^2.9.8"
   }
 }

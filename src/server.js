@@ -2,8 +2,11 @@
  * Multi-tenant Rate Limiter API
  * ------------------------------
  * Auth:
- *   POST /v1/auth/signup      -> create user account, get JWT
- *   POST /v1/auth/login       -> log in, get JWT
+ *   POST /v1/auth/signup          -> create user account, get JWT, sends a verification email
+ *   POST /v1/auth/login           -> log in, get JWT
+ *   POST /v1/auth/verify-email    -> confirm an emailed verification token
+ *   POST /v1/auth/forgot-password -> email a password reset link
+ *   POST /v1/auth/reset-password  -> set a new password using an emailed reset token
  *
  * Projects (require JWT — Authorization: Bearer <jwt>):
  *   POST   /v1/projects       -> create a project, get API key
@@ -23,7 +26,7 @@ const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-const { requireAuth, signup, login } = require('./services/users');
+const { requireAuth, signup, login, verifyEmail, requestPasswordReset, resetPassword } = require('./services/users');
 const {
   createProject,
   getProjectByApiKey,
@@ -84,6 +87,43 @@ app.post('/v1/auth/login', async (req, res) => {
     res.json(result);
   } catch (err) {
     res.status(401).json({ error: err.message });
+  }
+});
+
+app.post('/v1/auth/verify-email', async (req, res) => {
+  const { token } = req.body || {};
+  if (!token) return res.status(400).json({ error: 'token is required' });
+  try {
+    const result = await verifyEmail(token);
+    res.json({ verified: true, email: result.email });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+app.post('/v1/auth/forgot-password', async (req, res) => {
+  const { email } = req.body || {};
+  if (!email) return res.status(400).json({ error: 'email is required' });
+  try {
+    await requestPasswordReset(email);
+    // Same response whether or not the email exists — avoids leaking
+    // which addresses have accounts.
+    res.json({ message: 'If that email has an account, a reset link has been sent.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/v1/auth/reset-password', async (req, res) => {
+  const { token, password } = req.body || {};
+  if (!token || !password || password.length < 8) {
+    return res.status(400).json({ error: 'token and password (min 8 chars) are required' });
+  }
+  try {
+    await resetPassword(token, password);
+    res.json({ message: 'Password updated — you can log in now.' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
   }
 });
 

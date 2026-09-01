@@ -131,6 +131,34 @@
     <button class="btn" id="authSubmit">Log in</button>
     <div class="errorMsg" id="authError"></div>
     <div class="switchLink" id="authSwitch">Don't have an account? Sign up</div>
+    <div class="switchLink" id="forgotPasswordLink" style="text-decoration: none;">Forgot password?</div>
+    <div style="margin-top: 20px; font-size: 11px; color: var(--muted);">
+      By continuing you agree to our <a href="/terms.html" style="color: var(--muted);">Terms</a>
+      and <a href="/privacy.html" style="color: var(--muted);">Privacy Policy</a>.
+    </div>
+  </div>
+
+  <!-- FORGOT PASSWORD SCREEN -->
+  <div id="forgotScreen" class="hidden">
+    <h2>Reset your password</h2>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="forgotEmail" placeholder="you@company.com">
+    </div>
+    <button class="btn" id="forgotSubmit">Send reset link</button>
+    <div class="errorMsg" id="forgotError"></div>
+    <div class="switchLink" id="backToLogin">Back to log in</div>
+  </div>
+
+  <!-- RESET PASSWORD SCREEN (opened via emailed link with ?resetToken=...) -->
+  <div id="resetScreen" class="hidden">
+    <h2>Choose a new password</h2>
+    <div class="field">
+      <label>New password</label>
+      <input type="password" id="resetPassword" placeholder="••••••••">
+    </div>
+    <button class="btn" id="resetSubmit">Update password</button>
+    <div class="errorMsg" id="resetError"></div>
   </div>
 
   <!-- APP SCREEN -->
@@ -229,8 +257,22 @@ function showApp() {
 
 function showAuth() {
   document.getElementById('authScreen').classList.remove('hidden');
+  document.getElementById('forgotScreen').classList.add('hidden');
+  document.getElementById('resetScreen').classList.add('hidden');
   document.getElementById('appScreen').classList.add('hidden');
   document.getElementById('userBar').classList.add('hidden');
+}
+
+function showForgot() {
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('forgotScreen').classList.remove('hidden');
+  document.getElementById('resetScreen').classList.add('hidden');
+}
+
+function showReset() {
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('forgotScreen').classList.add('hidden');
+  document.getElementById('resetScreen').classList.remove('hidden');
 }
 
 function sessionExpired() {
@@ -279,6 +321,72 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
   token = null; email = null;
   showAuth();
 });
+
+/* ---- Forgot / reset password ---- */
+document.getElementById('forgotPasswordLink').addEventListener('click', showForgot);
+document.getElementById('backToLogin').addEventListener('click', showAuth);
+
+document.getElementById('forgotSubmit').addEventListener('click', async () => {
+  const emailVal = document.getElementById('forgotEmail').value.trim();
+  const errEl = document.getElementById('forgotError');
+  errEl.textContent = '';
+  try {
+    const res = await fetch(`${API}/v1/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: emailVal }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Something went wrong'; return; }
+    errEl.style.color = 'var(--go)';
+    errEl.textContent = data.message;
+  } catch (e) {
+    errEl.textContent = 'Could not reach the server.';
+  }
+});
+
+let pendingResetToken = null;
+
+document.getElementById('resetSubmit').addEventListener('click', async () => {
+  const passwordVal = document.getElementById('resetPassword').value;
+  const errEl = document.getElementById('resetError');
+  errEl.textContent = '';
+  try {
+    const res = await fetch(`${API}/v1/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: pendingResetToken, password: passwordVal }),
+    });
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Something went wrong'; return; }
+    history.replaceState(null, '', window.location.pathname);
+    showAuth();
+    document.getElementById('authError').style.color = 'var(--go)';
+    document.getElementById('authError').textContent = data.message;
+  } catch (e) {
+    errEl.textContent = 'Could not reach the server.';
+  }
+});
+
+/* ---- Email verification link handling (?verifyToken=...) ---- */
+async function handleVerifyTokenFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const verifyTokenParam = params.get('verifyToken');
+  if (!verifyTokenParam) return;
+
+  history.replaceState(null, '', window.location.pathname);
+  try {
+    const res = await fetch(`${API}/v1/auth/verify-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: verifyTokenParam }),
+    });
+    const data = await res.json();
+    const errEl = document.getElementById('authError');
+    errEl.style.color = res.ok ? 'var(--go)' : 'var(--stop)';
+    errEl.textContent = res.ok ? 'Email verified — you can log in now.' : (data.error || 'Verification failed.');
+  } catch (e) { /* ignore */ }
+}
 
 /* ---- Algo param field switching ---- */
 document.getElementById('npAlgo').addEventListener('change', (e) => {
@@ -487,7 +595,19 @@ document.getElementById('newProjectForm').addEventListener('submit', async (e) =
 });
 
 /* ---- boot ---- */
-if (token && email) showApp(); else showAuth();
+const bootParams = new URLSearchParams(window.location.search);
+if (bootParams.get('resetToken')) {
+  pendingResetToken = bootParams.get('resetToken');
+  history.replaceState(null, '', window.location.pathname);
+  showReset();
+} else if (bootParams.get('verifyToken')) {
+  if (token && email) showApp(); else showAuth();
+  handleVerifyTokenFromUrl();
+} else if (token && email) {
+  showApp();
+} else {
+  showAuth();
+}
 </script>
 </body>
 </html>
