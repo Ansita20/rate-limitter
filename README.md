@@ -1,4 +1,4 @@
-# Throttle — rate limiting for any app, in any language
+# Throttle : rate limiting for any app, in any language
 
 ## Link
 https://www.throtlle-ratelimiter.com
