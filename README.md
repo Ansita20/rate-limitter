@@ -1,6 +1,6 @@
 # Throttle
 
-A language-agnostic rate-limiting API backed by Redis.
+A language agnostic rate limiting API backed by Redis.
 
 ## Link
 
@@ -10,7 +10,7 @@ Live project: https://www.throtlle-ratelimiter.com
 
 ## Features
 
-* REST API — works with any language/framework
+* REST API works with any language/framework
 * Redis-backed rate limiting
 * 5 rate-limiting algorithms
 * Automatic algorithm selection
