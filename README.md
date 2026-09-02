@@ -17,7 +17,7 @@ your server ──POST /v1/check──▶ Throttle API ──▶ Redis ──▶
 
 - [Run it in one command (Docker)](#run-it-in-one-command-docker)
 - [Run it without Docker](#run-it-without-docker)
-- [How to use it from your app — any language](#how-to-use-it-from-your-app--any-language)
+- [How to use it from your app any language](#how-to-use-it-from-your-app--any-language)
 - [Algorithms & "auto" mode](#algorithms--auto-mode)
 - [Full API reference](#full-api-reference)
 - [Configuration](#configuration)
