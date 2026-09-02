@@ -6,9 +6,9 @@ https://www.throtlle-ratelimiter.com
 Sign up, create a "project," pick a rate-limiting algorithm (or let it
 pick automatically), and call **one REST endpoint** from your server to
 check whether a request should be allowed. That endpoint is plain HTTP +
-JSON, so it works from literally any language or framework — Node, Python,
+JSON, so it works from literally any language or framework Node, Python,
 Go, Ruby, PHP, Java, a shell script, whatever your website's backend is
-written in. Two ready-made SDKs (Node, Python) are included for
+written in. Two ready made SDKs (Node, Python) are included for
 convenience, but you never *need* them.
 
 ```
@@ -28,7 +28,7 @@ your server ──POST /v1/check──▶ Throttle API ──▶ Redis ──▶
 
 ## Run it in one command (Docker)
 
-This is the easiest path — it works the same on macOS, Windows, and Linux,
+This is the easiest path it works the same on macOS, Windows, and Linux,
 and you don't need Redis or Node installed on your machine at all.
 
 ```bash
@@ -41,7 +41,7 @@ That's it. The API is now running at `http://localhost:4000`, backed by its
 own Redis container with persistence enabled. Open `http://localhost:4000`
 in a browser for the dashboard (sign up, create a project, get an API key).
 
-To use a custom JWT secret or port, copy `.env.example` to `.env` first —
+To use a custom JWT secret or port, copy `.env.example` to `.env` first
 `docker compose` picks it up automatically:
 
 ```bash
@@ -59,24 +59,24 @@ Requires Node 18+ and a running Redis instance (local or hosted).
 
 ```bash
 npm install
-cp .env.example .env        # optional but recommended — see Configuration below
+cp .env.example .env        # optional but recommended see Configuration below
 redis-server &               # skip if you already have Redis running somewhere
 npm start
 ```
 
 Open `http://localhost:4000` for the dashboard.
 
-Verify everything works end-to-end:
+Verify everything works end to end:
 
 ```bash
 chmod +x scripts/test-requests.sh
 ./scripts/test-requests.sh
 ```
 
-## How to use it from your app — any language
+## How to use it from your app any language
 
 Every one of your customers' servers only ever needs to make **one HTTP
-call** per request it wants to rate-limit:
+call** per request it wants to rate limit:
 
 ```
 POST /v1/check
@@ -93,7 +93,7 @@ Response:
 ```
 
 If `allowed` is `false`, return a 429 from your own API. That's the entire
-integration — the snippets below are just this same call, one per
+integration the snippets below are just this same call, one per
 language.
 
 <details open>
@@ -108,7 +108,7 @@ curl -X POST https://your-throttle-host/v1/check \
 </details>
 
 <details>
-<summary><strong>Node.js (raw fetch — no SDK needed)</strong></summary>
+<summary><strong>Node.js (raw fetch no SDK needed)</strong></summary>
 
 ```js
 const res = await fetch('https://your-throttle-host/v1/check', {
@@ -125,7 +125,7 @@ Or use the included SDK for a one-liner + an Express middleware — see
 </details>
 
 <details>
-<summary><strong>Python (raw requests — no SDK needed)</strong></summary>
+<summary><strong>Python (raw requests no SDK needed)</strong></summary>
 
 ```python
 import requests
@@ -138,7 +138,7 @@ if not r.json()["allowed"]:
     ...  # return a 429
 ```
 
-Or use the included SDK for a one-liner + a Flask decorator — see
+Or use the included SDK for a one-liner + a Flask decorator see
 [`sdk-python/`](./sdk-python).
 </details>
 
