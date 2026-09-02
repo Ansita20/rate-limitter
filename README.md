@@ -243,7 +243,7 @@ an identifier's requests:
   smooths bursts and protects whatever's downstream of you.
 - **Steady, fast traffic** → `token-bucket`, which allows small natural
   bursts without penalizing normal use.
-- **Low or sporadic traffic** (or not enough data yet) → `sliding-window-counter`,
+- **Low or sporadic traffic** (or not enough data yet) → `sliding window counter`,
   which is accurate and cheap with no burst tolerance needed.
 
 **Be accurate about what this is**: it's a transparent heuristic, not
@@ -257,7 +257,7 @@ real traffic data to learn from.
 
 **Efficiency**: classification is computed with an online exponential
 moving average stored in a single small Redis hash per identifier (4
-fields), updated atomically via one Lua script — one Redis round trip per
+fields), updated atomically via one Lua script one Redis round trip per
 check, constant memory, and it adapts to a change in traffic shape within
 a handful of requests. (An earlier version of this stored the last 20 raw
 timestamps in a list and recomputed everything from scratch on every
@@ -329,39 +329,39 @@ it locally.
 ```
 throttle/
 ├── src/
-│   ├── server.js              — the API (auth, projects, rate-limit checks, usage)
+│   ├── server.js              : the API (auth, projects, rate-limit checks, usage)
 │   ├── services/
-│   │   ├── users.js           — signup/login, JWT sessions, bcrypt password hashing
-│   │   ├── projects.js        — project CRUD, ownership, API key generation
-│   │   ├── limiters.js        — the 5 algorithms + usage tracking + "auto" heuristic mode
-│   │   └── payments.js        — Razorpay order creation + payment verification + plan upgrades
+│   │   ├── users.js           : signup/login, JWT sessions, bcrypt password hashing
+│   │   ├── projects.js        : project CRUD, ownership, API key generation
+│   │   ├── limiters.js        : the 5 algorithms + usage tracking + "auto" heuristic mode
+│   │   └── payments.js        : Razorpay order creation + payment verification + plan upgrades
 │   └── clients/
-│       ├── redisClient.js     — single shared, configurable Redis connection
-│       └── razorpayClient.js  — shared Razorpay SDK client
-├── dashboard/index.html       — single-file web UI (signup, create/manage projects, view usage)
-├── sdk-node/                  — Node.js SDK (`throttle-sdk` on npm, once published)
-├── sdk-python/                — Python SDK (`throttle-sdk` on PyPI, once published)
-├── scripts/test-requests.sh   — smoke test hitting every endpoint
-├── Dockerfile / docker-compose.yml — one-command run, works anywhere
+│       ├── redisClient.js     : single shared, configurable Redis connection
+│       └── razorpayClient.js  : shared Razorpay SDK client
+├── dashboard/index.html       : single-file web UI (signup, create/manage projects, view usage)
+├── sdk-node/                  : Node.js SDK (`throttle-sdk` on npm, once published)
+├── sdk-python/                : Python SDK (`throttle-sdk` on PyPI, once published)
+├── scripts/test-requests.sh   : smoke test hitting every endpoint
+├── Dockerfile / docker-compose.yml : one command run, works anywhere
 └── .env.example
 ```
 
 ## What's still missing before this is production-ready
 
-- **Payment processing** — usage is tracked (`/v1/usage/:apiKey`), but
+- **Payment processing** : usage is tracked (`/v1/usage/:apiKey`), but
   nothing charges anyone yet. The monthly counter in Redis is exactly what
   you'd feed into `stripe.subscriptionItems.createUsageRecord()` on a
-  cron job — that just isn't wired up here.
-- **Email verification / password reset** — signup currently trusts any
+  cron job : that just isn't wired up here.
+- **Email verification / password reset** : signup currently trusts any
   email address.
-- **Redis persistence** — `docker-compose.yml` enables AOF persistence for
+- **Redis persistence** : `docker-compose.yml` enables AOF persistence for
   you; if you run Redis yourself outside Docker, make sure you've enabled
   AOF or RDB snapshots, or a restart wipes every account and project.
-- **Rate limiting on auth endpoints is basic** — fine to start, worth
+- **Rate limiting on auth endpoints is basic** : fine to start, worth
   hardening (e.g., account lockout after repeated failed logins) before
   handling real user credentials at scale.
-- **Horizontal scale** — a single Redis instance is fine for early
-  customers; move to Redis Cluster when you outgrow it. Every rate-limit
+- **Horizontal scale** : a single Redis instance is fine for early
+  customers; move to Redis Cluster when you outgrow it. Every rate limit
   key is self-contained (`rl:{projectId}:{algo}:{identifier}`), so that
   move doesn't require redesigning the key scheme.
-- **True ML-based adaptive limiting** — see "How auto mode works" above.
+- **True ML-based adaptive limiting** : see "How auto mode works" above.
