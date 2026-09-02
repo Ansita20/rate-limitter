@@ -2,7 +2,11 @@
 
 A language-agnostic rate-limiting API backed by Redis.
 
-Your application makes one HTTP request to `/v1/check` to determine whether a request should be allowed.
+## Link
+
+Live project: https://www.throtlle-ratelimiter.com
+
+> I couldn't get the `throttle` domain name, so I registered `throtlle` instead and used it for the project.
 
 ## Features
 
@@ -24,8 +28,6 @@ docker compose up
 ```
 
 API: `http://localhost:4000`
-
-Dashboard: `http://localhost:4000`
 
 ### Without Docker
 
@@ -63,45 +65,29 @@ If `allowed` is `false`, return HTTP `429` from your application.
 
 ## Algorithms
 
-| Algorithm                | Best For                      |
-| ------------------------ | ----------------------------- |
-| `fixed-window`           | Simple and inexpensive limits |
-| `sliding-window-log`     | Accurate limits               |
-| `sliding-window-counter` | Balanced accuracy and cost    |
-| `token-bucket`           | Allowing short bursts         |
-| `leaky-bucket`           | Smoothing traffic             |
-| `auto`                   | Automatic selection           |
-
-Example:
-
-```json
-{
-  "name": "my-project",
-  "algo": "token-bucket",
-  "capacity": 100,
-  "refillRatePerSec": 10
-}
-```
+| Algorithm                | Best For              |
+| ------------------------ | --------------------- |
+| `fixed-window`           | Simple limits         |
+| `sliding-window-log`     | High accuracy         |
+| `sliding-window-counter` | Accuracy + efficiency |
+| `token-bucket`           | Short bursts          |
+| `leaky-bucket`           | Smooth traffic        |
+| `auto`                   | Automatic selection   |
 
 ## API
 
 ```text
 POST   /v1/auth/signup
 POST   /v1/auth/login
-
 POST   /v1/projects
 GET    /v1/projects
 DELETE /v1/projects/:apiKey
-
 POST   /v1/check
 GET    /v1/usage/:apiKey
-
 GET    /health
 ```
 
 ## Configuration
-
-Copy `.env.example` to `.env`.
 
 ```env
 PORT=4000
@@ -110,7 +96,7 @@ JWT_SECRET=change-me
 CORS_ORIGIN=*
 ```
 
-Change `JWT_SECRET` before using the application with real users.
+Change `JWT_SECRET` before production use.
 
 ## Project Structure
 
