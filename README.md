@@ -1,37 +1,29 @@
 # Throttle
 
-A language agnostic rate limiting API backed by Redis.
+**Language-agnostic rate limiting API, backed by Redis.** Sign up, create a project, pick an algorithm (or let it choose one for you), call one REST endpoint from any language.
 
-## Link
+[![License: ISC](https://img.shields.io/badge/license-ISC-blue.svg)](./LICENSE)
+[![Node >= 18](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](package.json)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-orange.svg)](#contributing)
 
-Live project: https://www.throtlle-ratelimiter.com
-
-> I couldn't get the `throttle` domain name, so I registered `throtlle` instead and used it for the project.
+Live: [throtlle-ratelimiter.com](https://www.throtlle-ratelimiter.com) payments there run on **Razorpay test mode**, so signup and upgrades are safe to try with no real charges.
 
 ## Features
 
-* REST API works with any language/framework
-* Redis-backed rate limiting
-* 5 rate-limiting algorithms
-* Automatic algorithm selection
-* Docker support
-* Node.js and Python SDKs
+- One REST call from any language no client library required
+- 5 rate limiting algorithms, plus automatic selection
+- Multi-tenant: per-project API keys and usage tracking
+- Docker, Node.js SDK, Python SDK
 
 ## Quick Start
 
-### Docker
-
 ```bash
-git clone <this-repo>
-cd throttle
-docker compose up
+git clone https://github.com/Ansita20/rate-limitter.git
+cd rate-limitter
+docker compose up          # API on http://localhost:4000
 ```
 
-API: `http://localhost:4000`
-
-### Without Docker
-
-Requires Node.js 18+ and Redis.
+Without Docker (needs Node.js 18+ and Redis):
 
 ```bash
 npm install
@@ -39,40 +31,32 @@ cp .env.example .env
 npm start
 ```
 
-## Rate Limit Check
+## Usage
 
 ```http
 POST /v1/check
 Authorization: Bearer <API_KEY>
 Content-Type: application/json
 
-{
-  "identifier": "user_123"
-}
+{ "identifier": "user_123" }
 ```
-
-Response:
 
 ```json
-{
-  "allowed": true,
-  "remaining": 42,
-  "resetMs": 60000
-}
+{ "allowed": true, "remaining": 42, "resetMs": 60000 }
 ```
 
-If `allowed` is `false`, return HTTP `429` from your application.
+Return HTTP `429` from your app when `allowed` is `false`.
 
 ## Algorithms
 
 | Algorithm                | Best For              |
-| ------------------------ | --------------------- |
-| `fixed-window`           | Simple limits         |
-| `sliding-window-log`     | High accuracy         |
-| `sliding-window-counter` | Accuracy + efficiency |
-| `token-bucket`           | Short bursts          |
-| `leaky-bucket`           | Smooth traffic        |
-| `auto`                   | Automatic selection   |
+| ------------------------ | ---------------------- |
+| `fixed-window`           | Simple limits          |
+| `sliding-window-log`     | High accuracy          |
+| `sliding-window-counter` | Accuracy + efficiency  |
+| `token-bucket`           | Short bursts           |
+| `leaky-bucket`           | Smooth traffic         |
+| `auto`                   | Automatic selection    |
 
 ## API
 
@@ -94,33 +78,31 @@ PORT=4000
 REDIS_URL=redis://127.0.0.1:6379
 JWT_SECRET=change-me
 CORS_ORIGIN=*
+RAZORPAY_KEY_ID=rzp_test_...
+RAZORPAY_KEY_SECRET=...
 ```
 
-Change `JWT_SECRET` before production use.
+`JWT_SECRET` must be changed before production use. `RAZORPAY_KEY_*` should stay on `rzp_test_...` test keys unless you're actually taking live payments — see [.env.example](./.env.example).
 
-## Project Structure
+## Contributing
+
+PRs welcome! The codebase is small on purpose:
 
 ```text
 src/
-├── server.js
-├── services/
-│   ├── users.js
-│   ├── projects.js
-│   ├── limiters.js
-│   └── payments.js
-└── clients/
-    ├── redisClient.js
-    └── razorpayClient.js
+├── server.js       # routes
+├── services/        # business logic (users, projects, limiters, payments)
+└── clients/          # Redis, Razorpay
 
-dashboard/
-sdk-node/
-sdk-python/
-scripts/
-Dockerfile
-docker-compose.yml
-.env.example
+dashboard/    sdk-node/    sdk-python/    scripts/
 ```
+
+1. Fork, branch, make your change
+2. `npm test` runs a smoke test against a running instance (`scripts/test-requests.sh`)
+3. Open a PR
+
+Bug reports and algorithm ideas are just as welcome as code — open an [issue](https://github.com/Ansita20/rate-limitter/issues).
 
 ## License
 
-MIT License. See [LICENSE](./LICENSE).
+ISC License. See [LICENSE](./LICENSE).
