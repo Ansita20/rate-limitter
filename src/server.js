@@ -233,7 +233,16 @@ app.post('/v1/check', requireApiKey, async (req, res) => {
   }
 });
 
-app.get('/health', (req, res) => res.json({ ok: true }));
+app.get('/health', async (req, res) => {
+  const redis = require('./clients/redisClient');
+  let redisStatus;
+  try {
+    redisStatus = await redis.ping();
+  } catch (err) {
+    redisStatus = `error: ${err.message}`;
+  }
+  res.json({ ok: redisStatus === 'PONG', redis: redisStatus, redisConfig: redis.info_summary });
+});
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Rate Limit API running on http://localhost:${PORT}`));
