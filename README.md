@@ -6,7 +6,7 @@
 [![Node >= 18](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](package.json)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-orange.svg)](#contributing)
 
-Live: [throtlle-ratelimiter.com](https://www.throtlle-ratelimiter.com) payments there run on **Razorpay test mode**, so signup and upgrades are safe to try with no real charges.
+Live: [throtlle-ratelimiter.com](https://www.throtlle-ratelimiter.com)(https://rate-limitter-48cj-ho11gzjty-ansita20s-projects.vercel.app/) payments there run on **Razorpay test mode**, so signup and upgrades are safe to try with no real charges.
 
 ## Features
 
